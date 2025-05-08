@@ -29,7 +29,7 @@
 #### 1. Клонування репозиторію
 
 ```bash
-git clone https://github.comCoLoMoN-lgtm/random-challenge.git
+git clone https://github.com/CoLoMoN-lgtm/random-challenge.git
 cd random-challenge
 ```
 
