@@ -148,8 +148,11 @@
     </div>
 
     <script>
-        // Дані викликів
-        const challenges = {
+        // URL вашого бекенду - ЗМІНІТЬ НА СВІЙ!
+        const API_URL = 'http://localhost:5000/api'; // або ваш реальний URL бекенду
+        
+        // Локальні дані як резерв
+        const fallbackChallenges = {
             active: [
                 { text: 'Пройдіться на свіжому повітрі протягом 15 хвилин', difficulty: 'easy' },
                 { text: 'Виконайте 10 присідань прямо зараз', difficulty: 'medium' },
@@ -183,7 +186,7 @@
             ]
         };
 
-        const categories = {
+        const fallbackCategories = {
             active: { name: 'Активні', color: 'bg-red-500' },
             creative: { name: 'Творчі', color: 'bg-purple-500' },
             social: { name: 'Соціальні', color: 'bg-blue-500' },
@@ -192,7 +195,66 @@
         };
 
         let selectedCategory = 'all';
-        let customChallenges = [];
+        let challenges = {};
+        let categories = {};
+        let apiConnected = false;
+
+        // Завантаження даних з API
+        async function loadDataFromAPI() {
+            try {
+                console.log('Спроба підключення до API...');
+                
+                // Завантажуємо категорії
+                const categoriesResponse = await fetch(`${API_URL}/categories`);
+                if (!categoriesResponse.ok) throw new Error('Categories request failed');
+                const categoriesData = await categoriesResponse.json();
+                
+                // Завантажуємо виклики
+                const challengesResponse = await fetch(`${API_URL}/challenges`);
+                if (!challengesResponse.ok) throw new Error('Challenges request failed');
+                const challengesData = await challengesResponse.json();
+                
+                // Конвертуємо дані API у наш формат
+                categories = {};
+                categoriesData.forEach(cat => {
+                    categories[cat._id] = {
+                        name: cat.name,
+                        color: cat.color || 'bg-gray-500'
+                    };
+                });
+                
+                challenges = {};
+                challengesData.forEach(challenge => {
+                    if (!challenges[challenge.categoryId]) {
+                        challenges[challenge.categoryId] = [];
+                    }
+                    challenges[challenge.categoryId].push({
+                        id: challenge._id,
+                        text: challenge.text,
+                        difficulty: challenge.difficulty,
+                        category: challenge.categoryId
+                    });
+                });
+                
+                apiConnected = true;
+                updateConnectionStatus('Підключено до API! Дані завантажуються з бази.');
+                console.log('API підключено успішно');
+                
+            } catch (error) {
+                console.error('Помилка підключення до API:', error);
+                apiConnected = false;
+                challenges = fallbackChallenges;
+                categories = fallbackCategories;
+                updateConnectionStatus('Офлайн режим. Перевірте доступність API.');
+            }
+        }
+
+        function updateConnectionStatus(message) {
+            const statusElement = document.querySelector('.mt-8.text-white p:last-child');
+            if (statusElement) {
+                statusElement.textContent = message;
+            }
+        }
 
         function selectCategory(category) {
             selectedCategory = category;
@@ -208,44 +270,65 @@
             });
         }
 
-        function getRandomChallenge() {
+        async function getRandomChallenge() {
             const btn = document.getElementById('generateBtn');
             btn.innerHTML = '🔄 <span class="spin inline-block">⟳</span> Генеруємо...';
             btn.disabled = true;
 
-            setTimeout(() => {
-                let allChallenges = [];
-                
-                if (selectedCategory === 'all') {
-                    // Збираємо всі виклики
-                    Object.keys(challenges).forEach(cat => {
-                        challenges[cat].forEach(challenge => {
-                            allChallenges.push({...challenge, category: cat});
+            try {
+                if (apiConnected) {
+                    // Спробуємо отримати виклик з API
+                    const url = selectedCategory === 'all' 
+                        ? `${API_URL}/challenges/random`
+                        : `${API_URL}/challenges/random?category=${selectedCategory}`;
+                    
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const challenge = await response.json();
+                        displayChallenge({
+                            id: challenge._id,
+                            text: challenge.text,
+                            difficulty: challenge.difficulty,
+                            category: challenge.categoryId
                         });
-                    });
-                    customChallenges.forEach(challenge => {
-                        allChallenges.push(challenge);
-                    });
-                } else {
-                    // Виклики з вибраної категорії
-                    if (challenges[selectedCategory]) {
-                        challenges[selectedCategory].forEach(challenge => {
-                            allChallenges.push({...challenge, category: selectedCategory});
-                        });
+                        btn.innerHTML = '✨ Отримати виклик!';
+                        btn.disabled = false;
+                        return;
                     }
-                    customChallenges.filter(c => c.category === selectedCategory).forEach(challenge => {
-                        allChallenges.push(challenge);
-                    });
                 }
+                
+                // Fallback до локальних даних
+                setTimeout(() => {
+                    let allChallenges = [];
+                    
+                    if (selectedCategory === 'all') {
+                        Object.keys(challenges).forEach(cat => {
+                            challenges[cat].forEach(challenge => {
+                                allChallenges.push({...challenge, category: cat});
+                            });
+                        });
+                    } else {
+                        if (challenges[selectedCategory]) {
+                            challenges[selectedCategory].forEach(challenge => {
+                                allChallenges.push({...challenge, category: selectedCategory});
+                            });
+                        }
+                    }
 
-                if (allChallenges.length > 0) {
-                    const randomChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
-                    displayChallenge(randomChallenge);
-                }
+                    if (allChallenges.length > 0) {
+                        const randomChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
+                        displayChallenge(randomChallenge);
+                    }
 
+                    btn.innerHTML = '✨ Отримати виклик!';
+                    btn.disabled = false;
+                }, 500);
+                
+            } catch (error) {
+                console.error('Помилка отримання виклику:', error);
                 btn.innerHTML = '✨ Отримати виклик!';
                 btn.disabled = false;
-            }, 1000);
+            }
         }
 
         function displayChallenge(challenge) {
@@ -295,7 +378,7 @@
             }
         }
 
-        function addNewChallenge() {
+        async function addNewChallenge() {
             const text = document.getElementById('newChallengeText').value;
             const category = document.getElementById('newChallengeCategory').value;
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
@@ -307,23 +390,85 @@
 
             const newChallenge = {
                 text: text,
-                category: category,
+                categoryId: category,
                 difficulty: difficulty
             };
 
-            customChallenges.push(newChallenge);
-            
-            // Очищуємо форму
-            document.getElementById('newChallengeText').value = '';
-            document.getElementById('newChallengeCategory').value = '';
-            document.querySelector('input[name="difficulty"][value="easy"]').checked = true;
-            
-            // Закриваємо форму
-            toggleForm();
-            
-            // Показуємо новий виклик
-            displayChallenge(newChallenge);
+            try {
+                if (apiConnected) {
+                    // Спробуємо зберегти в API
+                    const response = await fetch(`${API_URL}/challenges`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(newChallenge)
+                    });
+                    
+                    if (response.ok) {
+                        const savedChallenge = await response.json();
+                        
+                        // Оновлюємо локальні дані
+                        if (!challenges[category]) {
+                            challenges[category] = [];
+                        }
+                        challenges[category].push({
+                            id: savedChallenge._id,
+                            text: savedChallenge.text,
+                            difficulty: savedChallenge.difficulty,
+                            category: savedChallenge.categoryId
+                        });
+                        
+                        displayChallenge({
+                            id: savedChallenge._id,
+                            text: savedChallenge.text,
+                            difficulty: savedChallenge.difficulty,
+                            category: savedChallenge.categoryId
+                        });
+                        
+                        // Очищуємо форму
+                        document.getElementById('newChallengeText').value = '';
+                        document.getElementById('newChallengeCategory').value = '';
+                        document.querySelector('input[name="difficulty"][value="easy"]').checked = true;
+                        toggleForm();
+                        
+                        alert('Виклик збережено в базі даних!');
+                        return;
+                    }
+                }
+                
+                // Fallback - збереження локально
+                if (!challenges[category]) {
+                    challenges[category] = [];
+                }
+                
+                const localChallenge = {
+                    text: text,
+                    category: category,
+                    difficulty: difficulty
+                };
+                
+                challenges[category].push(localChallenge);
+                
+                // Очищуємо форму
+                document.getElementById('newChallengeText').value = '';
+                document.getElementById('newChallengeCategory').value = '';
+                document.querySelector('input[name="difficulty"][value="easy"]').checked = true;
+                toggleForm();
+                
+                displayChallenge(localChallenge);
+                alert('Виклик збережено локально (без підключення до API)');
+                
+            } catch (error) {
+                console.error('Помилка збереження виклику:', error);
+                alert('Помилка збереження. Спробуйте ще раз.');
+            }
         }
+
+        // Ініціалізація при завантаженні сторінки
+        window.addEventListener('load', function() {
+            loadDataFromAPI();
+        });
     </script>
 </body>
 </html>
