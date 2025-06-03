@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, Filter, PlusCircle, AlertCircle } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from './AuthProvider';
+import { addCompletedChallenge, getCompletedChallenges } from '../utils/firestore';
 
 const RandomChallengeApp = () => {
   const [challenges, setChallenges] = useState([]);
@@ -10,33 +12,54 @@ const RandomChallengeApp = () => {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewChallengeForm, setShowNewChallengeForm] = useState(false);
-  const [newChallenge, setNewChallenge] = useState({ 
-    text: '', 
-    categoryId: '', 
-    difficulty: 'medium' 
+  const [newChallenge, setNewChallenge] = useState({
+    text: '',
+    categoryId: '',
+    difficulty: 'medium'
   });
 
   // Базовий URL API
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+
+  const { currentUser } = useAuth();
+  const [completedChallenges, setCompletedChallenges] = useState([]);
+
+  useEffect(() => {
+    const fetchCompletedChallenges = async () => {
+      if (currentUser) {
+        const completed = await getCompletedChallenges(currentUser.uid);
+        setCompletedChallenges(completed);
+      }
+    };
+
+    fetchCompletedChallenges();
+  }, [currentUser]);
+
+  const handleMarkAsCompleted = async () => {
+    if (currentUser && currentChallenge) {
+      await addCompletedChallenge(currentUser.uid, currentChallenge._id);
+      setCompletedChallenges((prev) => [...prev, currentChallenge._id]);
+    }
+  };
   // Завантаження даних з API
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Отримуємо категорії з API
         const categoriesResponse = await axios.get(`${API_URL}/categories`);
         setCategories(categoriesResponse.data);
-        
+
         // Отримуємо виклики з API
         const challengesResponse = await axios.get(`${API_URL}/challenges`);
         setChallenges(challengesResponse.data);
       } catch (err) {
         console.error('Помилка завантаження даних:', err);
         setError('Не вдалося завантажити дані. Перевірте підключення до сервера.');
-        
+
         // Демонстраційні дані для офлайн-режиму
         setCategories([
           { _id: 'active', name: 'Активні', color: 'bg-red-500' },
@@ -66,11 +89,11 @@ const RandomChallengeApp = () => {
   const getRandomChallenge = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Використовуємо API для отримання випадкового виклику
       let response;
-      
+
       if (selectedCategory === 'all') {
         // Запит випадкового виклику з усіх категорій
         response = await axios.get(`${API_URL}/challenges/random`);
@@ -78,17 +101,17 @@ const RandomChallengeApp = () => {
         // Запит випадкового виклику з вибраної категорії
         response = await axios.get(`${API_URL}/challenges/random?category=${selectedCategory}`);
       }
-      
+
       setCurrentChallenge(response.data);
     } catch (err) {
       console.error('Помилка отримання випадкового виклику:', err);
       setError('Не вдалося отримати виклик. Перевірте підключення до сервера.');
-      
+
       // Якщо API недоступний, імітуємо випадковий виклик локально
-      const filteredChallenges = challenges.filter(challenge => 
+      const filteredChallenges = challenges.filter(challenge =>
         selectedCategory === 'all' || challenge.categoryId === selectedCategory
       );
-      
+
       if (filteredChallenges.length > 0) {
         const randomIndex = Math.floor(Math.random() * filteredChallenges.length);
         setCurrentChallenge(filteredChallenges[randomIndex]);
@@ -107,32 +130,32 @@ const RandomChallengeApp = () => {
       setError('Будь ласка, заповніть всі обов\'язкові поля');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       // Відправляємо новий виклик на сервер через API
       const response = await axios.post(`${API_URL}/challenges`, newChallenge);
-      
+
       // Оновлюємо локальний стан
       setChallenges([...challenges, response.data]);
       setNewChallenge({ text: '', categoryId: '', difficulty: 'medium' });
       setShowNewChallengeForm(false);
-      
+
       // Показуємо новий виклик
       setCurrentChallenge(response.data);
     } catch (err) {
       console.error('Помилка додавання виклику:', err);
       setError('Не вдалося зберегти виклик. Можливо, сервер недоступний.');
-      
+
       // Локальна імітація
       const newId = (challenges.length + 1).toString();
-      const challengeToAdd = { 
-        _id: newId, 
-        ...newChallenge 
+      const challengeToAdd = {
+        _id: newId,
+        ...newChallenge
       };
-      
+
       setChallenges([...challenges, challengeToAdd]);
       setNewChallenge({ text: '', categoryId: '', difficulty: 'medium' });
       setShowNewChallengeForm(false);
@@ -190,26 +213,24 @@ const RandomChallengeApp = () => {
             <Filter size={20} className="mr-2" /> Оберіть категорію:
           </label>
           <div className="flex flex-wrap gap-2">
-            <button 
+            <button
               onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                selectedCategory === 'all' 
-                  ? 'bg-gray-800 text-white' 
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === 'all'
+                ? 'bg-gray-800 text-white'
+                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                }`}
             >
               Всі категорії
             </button>
-            
+
             {categories.map(category => (
-              <button 
+              <button
                 key={category._id}
                 onClick={() => setSelectedCategory(category._id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  selectedCategory === category._id 
-                    ? `${category.color} text-white` 
-                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === category._id
+                  ? `${category.color} text-white`
+                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
               >
                 {category.name}
               </button>
@@ -250,7 +271,15 @@ const RandomChallengeApp = () => {
               </div>
               <h2 className="text-2xl font-bold text-gray-800">{currentChallenge.text}</h2>
             </div>
-            
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={handleMarkAsCompleted}
+                className="bg-green-500 text-white px-4 py-2 rounded"
+                disabled={completedChallenges.includes(currentChallenge._id)}
+              >
+                {completedChallenges.includes(currentChallenge._id) ? 'Виконано' : 'Відзначити як виконане'}
+              </button>
+            </div>
             <div className="flex justify-center">
               <button
                 onClick={getRandomChallenge}
@@ -278,7 +307,7 @@ const RandomChallengeApp = () => {
             У цій категорії поки немає викликів. Додайте новий!
           </div>
         )}
-        
+
         {/* Кнопка для додавання нового виклику */}
         <div className="mt-8 text-center">
           <button
@@ -294,7 +323,7 @@ const RandomChallengeApp = () => {
         {showNewChallengeForm && (
           <div className="mt-4 p-4 border border-gray-200 rounded-lg">
             <h3 className="text-lg font-medium text-gray-800 mb-3">Новий виклик</h3>
-            
+
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Текст виклику:
@@ -302,19 +331,19 @@ const RandomChallengeApp = () => {
               <input
                 type="text"
                 value={newChallenge.text}
-                onChange={(e) => setNewChallenge({...newChallenge, text: e.target.value})}
+                onChange={(e) => setNewChallenge({ ...newChallenge, text: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Введіть опис виклику"
               />
             </div>
-            
+
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Категорія:
               </label>
               <select
                 value={newChallenge.categoryId}
-                onChange={(e) => setNewChallenge({...newChallenge, categoryId: e.target.value})}
+                onChange={(e) => setNewChallenge({ ...newChallenge, categoryId: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Оберіть категорію</option>
@@ -325,7 +354,7 @@ const RandomChallengeApp = () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Складність:
@@ -338,7 +367,7 @@ const RandomChallengeApp = () => {
                       name="difficulty"
                       value={difficulty}
                       checked={newChallenge.difficulty === difficulty}
-                      onChange={() => setNewChallenge({...newChallenge, difficulty})}
+                      onChange={() => setNewChallenge({ ...newChallenge, difficulty })}
                       className="mr-1"
                     />
                     <span className={`text-sm px-2 py-1 rounded-full ${getDifficultyClass(difficulty)}`}>
@@ -348,7 +377,7 @@ const RandomChallengeApp = () => {
                 ))}
               </div>
             </div>
-            
+
             <button
               onClick={handleAddNewChallenge}
               disabled={!newChallenge.text || !newChallenge.categoryId || loading}
@@ -364,7 +393,7 @@ const RandomChallengeApp = () => {
       <div className="mt-8 text-white text-center max-w-2xl">
         <p className="mb-2 font-medium">💾 Підключення до бази даних</p>
         <p className="text-sm opacity-80">
-          {error 
+          {error
             ? 'Працює в офлайн-режимі з тестовими даними. Перевірте підключення до сервера.'
             : 'Підключено до MongoDB через API. Дані завантажуються з бази даних.'
           }

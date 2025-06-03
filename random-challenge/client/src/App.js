@@ -1,11 +1,22 @@
+// src/App.js
 import React from 'react';
-import RandomChallengeApp from './components/RandomChallengeApp';
-import './App.css';
+import { useAuth } from './components/AuthProvider';
+import Login from './components/Login';
+import RandomChallenge from './components/RandomChallengeApp';
 
 function App() {
+  const { user, logout } = useAuth();
+
   return (
-    <div className="App">
-      <RandomChallengeApp />
+    <div>
+      {user ? (
+        <div>
+          <button onClick={logout} className="p-2 m-2 bg-red-500 text-white rounded">Вийти</button>
+          <RandomChallenge />
+        </div>
+      ) : (
+        <Login />
+      )}
     </div>
   );
 }
