@@ -1,4 +1,12 @@
-<!DOCTYPE html>
+async function debugAPI() {
+            try {
+                const response = await fetch(`${API_URL}/debug`);
+                const data = await response.json();
+                console.log('DEBUG DATA:', data);
+                
+                // Покажемо структуру даних
+                if (data.categories.length > 0) {
+                    console.log('Перша<!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
@@ -103,6 +111,9 @@
                     </button>
                     <button onclick="debugAPI()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
                         🐛 Debug API
+                    </button>
+                    <button onclick="testRandom()" class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                        🎲 Тест Random
                     </button>
                 </div>
             </div>
@@ -292,6 +303,29 @@
                 updateStatus(`🐛 Debug: ${data.categoriesCount} категорій, ${data.challengesCount} викликів`);
             } catch (error) {
                 updateStatus('❌ Помилка debug');
+                console.error(error);
+            }
+        }
+
+        async function testRandom() {
+            try {
+                updateStatus('⏳ Тестуємо random endpoint...');
+                
+                const response = await fetch(`${API_URL}/challenges/random`);
+                console.log('Random response status:', response.status);
+                
+                if (response.ok) {
+                    const challenge = await response.json();
+                    console.log('Random challenge:', challenge);
+                    updateStatus(`✅ Random працює: "${challenge.text}"`);
+                    displayChallenge(challenge);
+                } else {
+                    const error = await response.text();
+                    console.log('Random error:', error);
+                    updateStatus(`❌ Random failed: ${response.status}`);
+                }
+            } catch (error) {
+                updateStatus('❌ Помилка тест random');
                 console.error(error);
             }
         }
