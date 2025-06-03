@@ -48,7 +48,12 @@ const Challenge = mongoose.model('Challenge', challengeSchema);
 // Ініціалізація даних
 async function initDB() {
   try {
+    console.log('Перевірка бази даних...');
+    
     const catCount = await Category.countDocuments();
+    const chalCount = await Challenge.countDocuments();
+    
+    console.log(`Категорій: ${catCount}, Викликів: ${chalCount}`);
     
     if (catCount === 0) {
       console.log('Створюємо категорії...');
@@ -62,43 +67,57 @@ async function initDB() {
       ]);
       
       console.log('Категорії створено:', cats.length);
-      
-      // Отримуємо ID категорій
-      const active = cats.find(c => c.name === 'Активні')._id;
-      const creative = cats.find(c => c.name === 'Творчі')._id;
-      const social = cats.find(c => c.name === 'Соціальні')._id;
-      const home = cats.find(c => c.name === 'Домашні')._id;
-      const mindful = cats.find(c => c.name === 'Усвідомлені')._id;
-      
-      console.log('Створюємо виклики...');
-      
-      await Challenge.insertMany([
-        { text: 'Пройдіться на свіжому повітрі 15 хвилин', categoryId: active, difficulty: 'easy' },
-        { text: 'Виконайте 10 присідань', categoryId: active, difficulty: 'medium' },
-        { text: 'Зробіть зарядку 5 хвилин', categoryId: active, difficulty: 'easy' },
-        
-        { text: 'Намалюйте щось трьома кольорами', categoryId: creative, difficulty: 'medium' },
-        { text: 'Напишіть короткий вірш', categoryId: creative, difficulty: 'medium' },
-        { text: 'Зробіть цікаве фото', categoryId: creative, difficulty: 'easy' },
-        
-        { text: 'Напишіть другу', categoryId: social, difficulty: 'easy' },
-        { text: 'Подзвоніть рідним', categoryId: social, difficulty: 'easy' },
-        { text: 'Зробіть комплімент', categoryId: social, difficulty: 'medium' },
-        
-        { text: 'Приготуйте новий рецепт', categoryId: home, difficulty: 'medium' },
-        { text: 'Прибрайте одну полицю', categoryId: home, difficulty: 'easy' },
-        { text: 'Полийте рослини', categoryId: home, difficulty: 'easy' },
-        
-        { text: 'Медитуйте 5 хвилин', categoryId: mindful, difficulty: 'easy' },
-        { text: 'Запишіть 3 речі за які вдячні', categoryId: mindful, difficulty: 'easy' },
-        { text: 'Глибоко дихайте 2 хвилини', categoryId: mindful, difficulty: 'easy' }
-      ]);
-      
-      console.log('Виклики створено!');
     }
     
+    if (chalCount === 0) {
+      console.log('Створюємо виклики...');
+      
+      // Отримуємо всі категорії
+      const allCats = await Category.find();
+      const active = allCats.find(c => c.name === 'Активні')?._id;
+      const creative = allCats.find(c => c.name === 'Творчі')?._id;
+      const social = allCats.find(c => c.name === 'Соціальні')?._id;
+      const home = allCats.find(c => c.name === 'Домашні')?._id;
+      const mindful = allCats.find(c => c.name === 'Усвідомлені')?._id;
+      
+      console.log('ID категорій:', { active, creative, social, home, mindful });
+      
+      if (active && creative && social && home && mindful) {
+        await Challenge.insertMany([
+          { text: 'Пройдіться на свіжому повітрі 15 хвилин', categoryId: active, difficulty: 'easy' },
+          { text: 'Виконайте 10 присідань', categoryId: active, difficulty: 'medium' },
+          { text: 'Зробіть зарядку 5 хвилин', categoryId: active, difficulty: 'easy' },
+          
+          { text: 'Намалюйте щось трьома кольорами', categoryId: creative, difficulty: 'medium' },
+          { text: 'Напишіть короткий вірш', categoryId: creative, difficulty: 'medium' },
+          { text: 'Зробіть цікаве фото', categoryId: creative, difficulty: 'easy' },
+          
+          { text: 'Напишіть другу', categoryId: social, difficulty: 'easy' },
+          { text: 'Подзвоніть рідним', categoryId: social, difficulty: 'easy' },
+          { text: 'Зробіть комплімент', categoryId: social, difficulty: 'medium' },
+          
+          { text: 'Приготуйте новий рецепт', categoryId: home, difficulty: 'medium' },
+          { text: 'Прибрайте одну полицю', categoryId: home, difficulty: 'easy' },
+          { text: 'Полийте рослини', categoryId: home, difficulty: 'easy' },
+          
+          { text: 'Медитуйте 5 хвилин', categoryId: mindful, difficulty: 'easy' },
+          { text: 'Запишіть 3 речі за які вдячні', categoryId: mindful, difficulty: 'easy' },
+          { text: 'Глибоко дихайте 2 хвилини', categoryId: mindful, difficulty: 'easy' }
+        ]);
+        
+        console.log('Виклики створено!');
+      } else {
+        console.log('ПОМИЛКА: Не знайдено всі категорії для створення викликів');
+      }
+    }
+    
+    // Финальна перевірка
+    const finalCatCount = await Category.countDocuments();
+    const finalChalCount = await Challenge.countDocuments();
+    console.log(`ФІНАЛЬНИЙ РЕЗУЛЬТАТ - Категорій: ${finalCatCount}, Викликів: ${finalChalCount}`);
+    
   } catch (error) {
-    console.error('Помилка ініціалізації:', error);
+    console.error('ПОМИЛКА ініціалізації:', error);
   }
 }
 
@@ -173,6 +192,43 @@ app.post('/api/challenges', async (req, res) => {
     res.status(201).json(challenge);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// ТЕСТОВИЙ ENDPOINT ДЛЯ ІНІЦІАЛІЗАЦІЇ
+app.post('/api/init', async (req, res) => {
+  try {
+    console.log('РУЧНА ІНІЦІАЛІЗАЦІЯ ВИКЛИКАНА');
+    await initDB();
+    
+    const catCount = await Category.countDocuments();
+    const chalCount = await Challenge.countDocuments();
+    
+    res.json({ 
+      message: 'Ініціалізація завершена',
+      categories: catCount,
+      challenges: chalCount
+    });
+  } catch (error) {
+    console.error('Помилка ручної ініціалізації:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DEBUG ENDPOINT
+app.get('/api/debug', async (req, res) => {
+  try {
+    const cats = await Category.find();
+    const chals = await Challenge.find();
+    
+    res.json({
+      categoriesCount: cats.length,
+      categories: cats,
+      challengesCount: chals.length,
+      challenges: chals
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
