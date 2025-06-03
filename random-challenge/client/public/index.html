@@ -283,6 +283,7 @@
                         : `${API_URL}/challenges/random?category=${selectedCategory}`;
                     
                     const response = await fetch(url);
+                    
                     if (response.ok) {
                         const challenge = await response.json();
                         displayChallenge({
@@ -294,6 +295,23 @@
                         btn.innerHTML = '✨ Отримати виклик!';
                         btn.disabled = false;
                         return;
+                    } else if (response.status === 404) {
+                        console.log('API повернув 404 - база порожня, ініціалізуємо дані...');
+                        await initializeApiData();
+                        // Спробуємо ще раз після ініціалізації
+                        const retryResponse = await fetch(url);
+                        if (retryResponse.ok) {
+                            const challenge = await retryResponse.json();
+                            displayChallenge({
+                                id: challenge._id,
+                                text: challenge.text,
+                                difficulty: challenge.difficulty,
+                                category: challenge.categoryId
+                            });
+                            btn.innerHTML = '✨ Отримати виклик!';
+                            btn.disabled = false;
+                            return;
+                        }
                     }
                 }
                 
@@ -302,14 +320,14 @@
                     let allChallenges = [];
                     
                     if (selectedCategory === 'all') {
-                        Object.keys(challenges).forEach(cat => {
-                            challenges[cat].forEach(challenge => {
+                        Object.keys(fallbackChallenges).forEach(cat => {
+                            fallbackChallenges[cat].forEach(challenge => {
                                 allChallenges.push({...challenge, category: cat});
                             });
                         });
                     } else {
-                        if (challenges[selectedCategory]) {
-                            challenges[selectedCategory].forEach(challenge => {
+                        if (fallbackChallenges[selectedCategory]) {
+                            fallbackChallenges[selectedCategory].forEach(challenge => {
                                 allChallenges.push({...challenge, category: selectedCategory});
                             });
                         }
@@ -318,6 +336,7 @@
                     if (allChallenges.length > 0) {
                         const randomChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
                         displayChallenge(randomChallenge);
+                        updateConnectionStatus('Використовуються локальні дані (база на сервері порожня)');
                     }
 
                     btn.innerHTML = '✨ Отримати виклик!';
@@ -328,6 +347,62 @@
                 console.error('Помилка отримання виклику:', error);
                 btn.innerHTML = '✨ Отримати виклик!';
                 btn.disabled = false;
+            }
+        }
+
+        // Функція для ініціалізації даних в API
+        async function initializeApiData() {
+            try {
+                console.log('Ініціалізуємо дані в API...');
+                
+                // Спочатку додаємо категорії
+                const categoriesToAdd = [
+                    { _id: 'active', name: 'Активні', color: 'bg-red-500' },
+                    { _id: 'creative', name: 'Творчі', color: 'bg-purple-500' },
+                    { _id: 'social', name: 'Соціальні', color: 'bg-blue-500' },
+                    { _id: 'home', name: 'Домашні', color: 'bg-green-500' },
+                    { _id: 'mindful', name: 'Усвідомлені', color: 'bg-yellow-500' }
+                ];
+
+                for (const category of categoriesToAdd) {
+                    try {
+                        await fetch(`${API_URL}/categories`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(category)
+                        });
+                    } catch (e) {
+                        // Категорія вже може існувати
+                    }
+                }
+
+                // Потім додаємо виклики
+                const challengesToAdd = [
+                    { text: 'Пройдіться на свіжому повітрі протягом 15 хвилин', categoryId: 'active', difficulty: 'easy' },
+                    { text: 'Виконайте 10 присідань прямо зараз', categoryId: 'active', difficulty: 'medium' },
+                    { text: 'Намалюйте щось, використовуючи лише три кольори', categoryId: 'creative', difficulty: 'medium' },
+                    { text: 'Надішліть повідомлення старому другу', categoryId: 'social', difficulty: 'easy' },
+                    { text: 'Приготуйте новий рецепт', categoryId: 'home', difficulty: 'medium' },
+                    { text: 'Проведіть 5 хвилин у медитації', categoryId: 'mindful', difficulty: 'easy' }
+                ];
+
+                for (const challenge of challengesToAdd) {
+                    try {
+                        await fetch(`${API_URL}/challenges`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(challenge)
+                        });
+                    } catch (e) {
+                        console.log('Помилка додавання виклику:', e);
+                    }
+                }
+
+                console.log('Дані ініціалізовано в API');
+                updateConnectionStatus('API підключено! Дані ініціалізовано.');
+                
+            } catch (error) {
+                console.error('Помилка ініціалізації API:', error);
             }
         }
 
