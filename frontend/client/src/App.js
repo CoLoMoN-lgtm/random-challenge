@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import axios from 'axios';
 import Header from './components/Header';
 import CategorySelector from './components/CategorySelector';
 import ChallengeDisplay from './components/ChallengeDisplay';
@@ -9,6 +8,7 @@ import ConnectionStatus from './components/ConnectionStatus';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
 import { GlobalStyle } from './styles/GlobalStyle';
+import api from './utils/api';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -90,10 +90,16 @@ function App() {
   const fetchCategories = async () => {
     try {
       const response = await axios.get('/api/categories');
-      setCategories(response.data);
+      if (Array.isArray(response.data)) {
+        setCategories(response.data);
+      } else {
+        console.error('Categories response is not an array:', response.data);
+        setCategories([]);
+      }
     } catch (err) {
       setError('Не вдалося завантажити категорії');
       console.error('Error fetching categories:', err);
+      setCategories([]);
     }
   };
 
