@@ -95,6 +95,16 @@
             <!-- Статус -->
             <div class="mt-8 text-center">
                 <p id="status" class="text-sm text-gray-600">Завантаження...</p>
+                
+                <!-- ТЕСТОВІ КНОПКИ -->
+                <div class="mt-4 space-x-2">
+                    <button onclick="initAPI()" class="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                        🔧 Ініціалізувати API
+                    </button>
+                    <button onclick="debugAPI()" class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                        🐛 Debug API
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -256,6 +266,34 @@
 
         function updateStatus(message) {
             document.getElementById('status').textContent = message;
+        }
+
+        // ТЕСТОВІ ФУНКЦІЇ
+        async function initAPI() {
+            updateStatus('⏳ Ініціалізація API...');
+            try {
+                const response = await fetch(`${API_URL}/init`, { method: 'POST' });
+                const data = await response.json();
+                updateStatus(`✅ Ініціалізовано: ${data.categories} категорій, ${data.challenges} викликів`);
+                
+                // Перезавантажуємо категорії
+                await loadCategories();
+            } catch (error) {
+                updateStatus('❌ Помилка ініціалізації');
+                console.error(error);
+            }
+        }
+
+        async function debugAPI() {
+            try {
+                const response = await fetch(`${API_URL}/debug`);
+                const data = await response.json();
+                console.log('DEBUG DATA:', data);
+                updateStatus(`🐛 Debug: ${data.categoriesCount} категорій, ${data.challengesCount} викликів`);
+            } catch (error) {
+                updateStatus('❌ Помилка debug');
+                console.error(error);
+            }
         }
 
         // Ініціалізація
