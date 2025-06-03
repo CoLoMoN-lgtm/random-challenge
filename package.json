@@ -1,0 +1,47 @@
+{
+  "name": "random-challenge",
+  "version": "1.0.0",
+  "description": "Random Challenge - Web app for generating random daily challenges",
+  "private": true,
+  "scripts": {
+    "install:backend": "cd backend && npm install",
+    "install:all": "npm run install:backend",
+    "start:backend": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "start:frontend": "npx http-server . -p 3000 -c-1",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run start:frontend\"",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build",
+    "docker:rebuild": "docker-compose down && docker-compose up --build -d",
+    "deploy:vercel": "vercel",
+    "deploy:render": "echo 'Push to main branch to trigger Render deployment'",
+    "health-check": "curl -f http://localhost:5000/api/health || exit 1",
+    "test": "cd backend && npm test",
+    "lint": "cd backend && npm run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "http-server": "^14.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/random-challenge.git"
+  },
+  "keywords": [
+    "challenges",
+    "random",
+    "daily-challenges",
+    "nodejs",
+    "mongodb",
+    "express"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/your-username/random-challenge/issues"
+  },
+  "homepage": "https://github.com/your-username/random-challenge#readme"
+}

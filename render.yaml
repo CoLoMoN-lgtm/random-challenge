@@ -1,0 +1,29 @@
+services:
+  # Backend API Service
+  - type: web
+    name: random-challenge-api
+    runtime: node
+    region: oregon
+    buildCommand: cd backend && npm ci --only=production
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: random-challenge-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://your-frontend-domain.vercel.app
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+databases:
+  - name: random-challenge-db
+    databaseName: random_challenge
+    plan: free
+    region: oregon
