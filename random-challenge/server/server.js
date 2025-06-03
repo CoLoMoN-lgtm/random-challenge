@@ -40,7 +40,7 @@ app.use(cors({
 }));
 
 // MongoDB підключення
-const MONGODB_URI=mongodb+srv://lopskijdanilo:Lopskiy228@cluster0.0qotxua.mongodb.net/random-challenge-app?retryWrites=true&w=majority;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/random-challenge-app';
 
 console.log('Спроба підключення до MongoDB з URI:', MONGODB_URI.replace(/\/\/.*:.*@/, '//user:****@'));
 
