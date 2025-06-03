@@ -149,38 +149,61 @@ app.post('/api/categories', async (req, res) => {
 // Виклики
 app.get('/api/challenges', async (req, res) => {
   try {
+    console.log('Challenges endpoint викликано з query:', req.query);
+    
     let filter = { isActive: true };
     
     if (req.query.category && req.query.category !== 'all') {
       filter.categoryId = req.query.category;
     }
     
+    console.log('Фільтр для challenges:', filter);
+    
     const challenges = await Challenge.find(filter);
+    console.log('Знайдено challenges:', challenges.length);
+    
     res.json(challenges);
   } catch (error) {
+    console.error('ПОМИЛКА в challenges endpoint:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.get('/api/challenges/random', async (req, res) => {
   try {
+    console.log('Random endpoint викликано з query:', req.query);
+    
     let filter = { isActive: true };
     
     if (req.query.category && req.query.category !== 'all') {
       filter.categoryId = req.query.category;
+      console.log('Фільтр за категорією:', filter);
     }
     
+    console.log('Шукаємо з фільтром:', filter);
+    
     const count = await Challenge.countDocuments(filter);
+    console.log('Знайдено викликів:', count);
     
     if (count === 0) {
+      console.log('Немає викликів для фільтра:', filter);
       return res.status(404).json({ error: 'Немає викликів' });
     }
     
     const random = Math.floor(Math.random() * count);
+    console.log('Випадковий індекс:', random);
+    
     const challenge = await Challenge.findOne(filter).skip(random);
+    console.log('Знайдений виклик:', challenge);
+    
+    if (!challenge) {
+      console.log('ПОМИЛКА: виклик не знайдено після skip');
+      return res.status(404).json({ error: 'Виклик не знайдено' });
+    }
     
     res.json(challenge);
   } catch (error) {
+    console.error('ПОМИЛКА в random endpoint:', error);
     res.status(500).json({ error: error.message });
   }
 });
