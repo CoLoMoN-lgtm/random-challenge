@@ -21,27 +21,38 @@ const RandomChallengeApp = () => {
   // Базовий URL API
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-
-  const { currentUser } = useAuth();
+  const { user } = useAuth(); // Змінено з currentUser на user
   const [completedChallenges, setCompletedChallenges] = useState([]);
 
   useEffect(() => {
     const fetchCompletedChallenges = async () => {
-      if (currentUser) {
-        const completed = await getCompletedChallenges(currentUser.uid);
-        setCompletedChallenges(completed);
+      if (user) {
+        try {
+          const completed = await getCompletedChallenges(user.uid);
+          setCompletedChallenges(completed);
+        } catch (error) {
+          console.log('Помилка завантаження виконаних челенджів:', error.message);
+          setCompletedChallenges([]);
+        }
       }
     };
 
     fetchCompletedChallenges();
-  }, [currentUser]);
+  }, [user]);
 
   const handleMarkAsCompleted = async () => {
-    if (currentUser && currentChallenge) {
-      await addCompletedChallenge(currentUser.uid, currentChallenge._id);
-      setCompletedChallenges((prev) => [...prev, currentChallenge._id]);
+    if (user && currentChallenge) {
+      try {
+        await addCompletedChallenge(user.uid, currentChallenge._id);
+        setCompletedChallenges((prev) => [...prev, currentChallenge._id]);
+      } catch (error) {
+        console.log('Помилка збереження виконаного челенджу:', error.message);
+        // Все одно додаємо до локального стану
+        setCompletedChallenges((prev) => [...prev, currentChallenge._id]);
+      }
     }
   };
+
   // Завантаження даних з API
   useEffect(() => {
     const fetchData = async () => {
@@ -274,13 +285,17 @@ const RandomChallengeApp = () => {
             <div className="flex justify-center mt-4">
               <button
                 onClick={handleMarkAsCompleted}
-                className="bg-green-500 text-white px-4 py-2 rounded"
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  completedChallenges.includes(currentChallenge._id)
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-500 text-white hover:bg-green-600 transform hover:scale-105'
+                }`}
                 disabled={completedChallenges.includes(currentChallenge._id)}
               >
-                {completedChallenges.includes(currentChallenge._id) ? 'Виконано' : 'Відзначити як виконане'}
+                {completedChallenges.includes(currentChallenge._id) ? '✓ Виконано' : 'Відзначити як виконане'}
               </button>
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center mt-3">
               <button
                 onClick={getRandomChallenge}
                 className="text-purple-600 flex items-center hover:text-purple-800 transition-colors"
